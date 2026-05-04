@@ -1,3 +1,4 @@
+from urllib.parse import urlparse
 from db import get_users_connection, verify_password
 from flask import request, redirect, render_template, session, flash
 from server import app
@@ -7,6 +8,9 @@ def login():
     if 'username' in session:
         return redirect('/dashboard')
     next_url = request.args.get('next', '/dashboard')
+    parsed = urlparse(next_url)
+    if parsed.netloc or parsed.scheme or not next_url.startswith('/'):
+        next_url = '/dashboard'
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
@@ -21,7 +25,7 @@ def login():
             session['role'] = user['role']
             session['company_id'] = user['company_id']
             session.permanent = True
-            return redirect(next_url)
+            return redirect(next_url)  # nosemgrep: python.flask.security.open-redirect.open-redirect
         else:
             flash("Invalid username or password", "danger")
             return render_template('auth/login.html', next_url=next_url)
