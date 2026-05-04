@@ -1,0 +1,134 @@
+name: DevSecOps Pipeline - Company Management Platform
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+permissions:
+  contents: read
+  issues: write
+  security-events: write
+
+jobs:
+
+  security-analysis:
+    name: "Analisis de Seguridad - SAST + SCA"
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: "Descargar codigo del repositorio"
+        uses: actions/checkout@v4
+
+      - name: "Preparar entorno - Python 3.11"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: "Instalar dependencias del proyecto"
+        run: |
+          echo "================================================"
+          echo "  INSTALANDO DEPENDENCIAS"
+          echo "================================================"
+          python -m pip install --upgrade pip
+          pip install flask flask-wtf bcrypt gunicorn
+          echo "Dependencias instaladas correctamente"
+
+      - name: "SAST - Semgrep (analisis estatico con detalle completo)"
+        run: |
+          echo "================================================"
+          echo "  SAST - SEMGREP"
+          echo "  Reglas: p/python p/flask p/owasp-top-ten"
+          echo "          p/sql-injection p/xss"
+          echo "  Objetivo: detectar vulnerabilidades en codigo"
+          echo "================================================"
+          pip install semgrep -q
+          semgrep --config=p/python --config=p/flask --config=p/owasp-top-ten \
+            --config=p/sql-injection --config=p/xss --text . || true
+        continue-on-error: true
+
+      - name: "SAST - Generar reporte JSON de hallazgos"
+        run: |
+          pip install semgrep -q 2>/dev/null || true
+          semgrep --config=p/python --config=p/flask --config=p/owasp-top-ten \
+            --config=p/sql-injection --config=p/xss \
+            --json --output=semgrep_results.json --quiet . || true
+          echo ""
+          echo "================================================"
+          echo "  RESUMEN SAST - HALLAZGOS DETECTADOS"
+          echo "================================================"
+          python3 -c "import json; d=json.load(open('semgrep_results.json')); r=d.get('results',[]); print('Total hallazgos: '+str(len(r))); [print('  '+str(i+1)+'. ['+x.get('extra',{}).get('severity','?')+'] '+x.get('path','?')+':'+str(x.get('start',{}).get('line','?'))+' | '+x.get('check_id','?').split('.')[-1]) for i,x in enumerate(r)] or (print('Sin hallazgos SAST detectados') if not r else None)"
+        continue-on-error: true
+
+      - name: "SCA - pip-audit (auditoria de dependencias)"
+        run: |
+          echo "================================================"
+          echo "  SCA - PIP-AUDIT"
+          echo "  Fuente: OSV + PyPI Advisory Database"
+          echo "  Objetivo: detectar CVEs en requirements.txt"
+          echo "================================================"
+          pip install pip-audit -q
+          pip-audit --requirement requirements.txt --format json --output pip_audit_results.json || true
+          echo ""
+          echo "================================================"
+          echo "  RESULTADOS SCA - DEPENDENCIAS AUDITADAS"
+          echo "================================================"
+          python3 -c "import json; d=json.load(open('pip_audit_results.json')); deps=d.get('dependencies',[]); total=sum(len(x.get('vulns',[]))for x in deps); print('Dependencias analizadas  : '+str(len(deps))); print('Vulnerabilidades halladas: '+str(total)); [print('  VULN: '+dep.get('name','?')+'=='+dep.get('version','?')+' -> '+v.get('id','?')) for dep in deps for v in dep.get('vulns',[])] or (print('Sin vulnerabilidades en dependencias') if total==0 else None)"
+        continue-on-error: true
+
+      - name: "Subir reportes como artefactos"
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            semgrep_results.json
+            pip_audit_results.json
+          retention-days: 30
+
+      - name: "Resumen final del analisis"
+        run: |
+          echo "================================================"
+          echo "  PIPELINE DEVSECOPS - ANALISIS COMPLETADO"
+          echo "================================================"
+          SAST=$(python3 -c "import json; d=json.load(open('semgrep_results.json')); print(len(d.get('results',[])))" 2>/dev/null || echo "0")
+          SCA=$(python3 -c "import json; d=json.load(open('pip_audit_results.json')); print(sum(len(x.get('vulns',[]))for x in d.get('dependencies',[])))" 2>/dev/null || echo "0")
+          echo "  SAST (Semgrep)  : $SAST hallazgos detectados"
+          echo "  SCA  (pip-audit): $SCA vulnerabilidades detectadas"
+          echo "  Reportes en     : Actions > Artifacts"
+          echo "================================================"
+        continue-on-error: true
+
+  dast-analysis:
+    name: "DAST - OWASP ZAP (analisis dinamico)"
+    runs-on: ubuntu-latest
+    needs: security-analysis
+    steps:
+      - name: "Descargar codigo del repositorio"
+        uses: actions/checkout@v4
+      - name: "DAST - OWASP ZAP Full Scan"
+        uses: zaproxy/action-full-scan@v0.12.0
+        with:
+          target: ""
+          rules_file_name: ".zap/rules.tsv"
+          cmd_options: "-a"
+          issue_title: "ZAP Full Scan Report"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fail_action: false
+          artifact_name: "zap-report-html"
+        continue-on-error: true
+
+  deploy:
+    name: "Deploy automatico a Render.com"
+    runs-on: ubuntu-latest
+    needs: [security-analysis]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: "Trigger redespliegue en Render.com"
+        run: |
+          echo "================================================"
+          echo "  DEPLOY - RENDER.COM"
+          echo "================================================"
+          curl -s -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" || true
+          echo "Senal de redespliegue enviada a Render.com"
