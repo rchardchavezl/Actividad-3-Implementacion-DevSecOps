@@ -110,7 +110,7 @@ jobs:
       - name: "DAST - OWASP ZAP Full Scan"
         uses: zaproxy/action-full-scan@v0.12.0
         with:
-          target: ""
+          target: "https://actividad-3-implementacion-devsecops.onrender.com"
           rules_file_name: ".zap/rules.tsv"
           cmd_options: "-a"
           issue_title: "ZAP Full Scan Report"
