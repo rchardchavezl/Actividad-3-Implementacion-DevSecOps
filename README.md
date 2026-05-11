@@ -1,64 +1,126 @@
-# NovaCorp — Company Management Platform
+# NovaCorp — Company Management Platform + DevSecOps
 
-**NovaCorp Platform** is an internal web application for managing companies and their associated comments. It supports three roles (`admin`, `owner`, `user`) with different access levels.
-
----
-
-## Installation
-
-```bash
-pip install -r requirements.txt
-python main.py
-```
-
-Visit: `http://127.0.0.1:5000`
-
-The database is automatically initialized on first run.
+NovaCorp es una aplicación web desarrollada en Flask para la gestión de empresas y comentarios asociados.  
+El sistema implementa control de acceso por roles (admin, owner, user) y un pipeline de DevSecOps integrado para análisis de seguridad automatizado.
 
 ---
 
-## Default Users
+## 🌍 Aplicación en producción
 
-| Username | Password   | Role   | Notes                      |
-|----------|------------|--------|----------------------------|
-| `alice`  | password1  | user   | Standard employee          |
-| `bob`    | password2  | owner  | Owns "Insegura Corp"       |
-| `admin`  | admin123   | admin  | Full access                |
+La aplicación se encuentra desplegada y accesible públicamente en:
+
+👉 https://actividad-3-implementacion-devsecops.onrender.com
 
 ---
 
-## Project Structure
+## Usuarios por defecto
+
+| Usuario | Contraseña | Rol   | Descripción              |
+|--------|------------|--------|--------------------------|
+| alice  | password1  | user   | Usuario estándar         |
+| bob    | password2  | owner  | Propietario de empresa   |
+| admin  | admin123   | admin  | Acceso completo          |
+
+---
+
+## Estructura del proyecto
 
 ```
 .
-├── main.py                 # Entry point
-├── server.py               # Flask app configuration
-├── db/
-│   └── __init__.py         # Database initialization and helpers
-├── routes/
-│   ├── auth.py             # Login/logout
-│   ├── companies.py        # Company views, dashboard, search
-│   ├── companies_admin.py  # Admin company management
-│   ├── users_admin.py      # Admin user management
-│   └── profile.py          # User profiles
-├── templates/
-│   ├── base.html           # Shared layout
-│   ├── dashboard.html      # Main dashboard
-│   ├── auth/               # Login page
-│   ├── companies/          # Company pages
-│   ├── admin/              # Admin panels
-│   ├── profile/            # User profile pages
-│   └── errors/             # 404, 403 pages
-├── static/
-│   └── css/style.css       # Custom styles
-└── requirements.txt
+├── .github/workflows/devsecops.yml   # Pipeline DevSecOps
+├── .zap/rules.tsv                   # Reglas personalizadas ZAP
+├── db/                              # Base de datos
+├── routes/                          # Rutas de la aplicación
+├── static/                          # Archivos estáticos
+├── templates/                       # Vistas HTML
+├── .semgrepignore                   # Exclusiones SAST
+├── Dockerfile                       # Contenedor Docker
+├── main.py                          # Punto de entrada
+├── server.py                        # Configuración Flask
+├── init_db.py                       # Inicialización DB
+├── requirements.txt                 # Dependencias
+├── Pipfile / Pipfile.lock
+├── Procfile                         # Configuración Render
+├── start.sh                         # Script de arranque
+└── README.md
 ```
 
 ---
 
-## Technologies
+## Tecnologías utilizadas
 
-- Python 3 + Flask
-- SQLite
-- Bootstrap 5.3
-- Jinja2 + Bootstrap Icons
+- Python 3  
+- Flask  
+- SQLite  
+- Bootstrap  
+- Jinja2  
+- GitHub Actions  
+- Semgrep (SAST)  
+- pip-audit (SCA)  
+- OWASP ZAP (DAST)  
+- Docker  
+- Render  
+
+---
+
+## Pipeline DevSecOps
+
+El pipeline definido en:
+
+`.github/workflows/devsecops.yml`
+
+se ejecuta automáticamente con cada push.
+
+### 🔍 SAST — Semgrep
+
+Detecta vulnerabilidades como:
+
+- SQL Injection  
+- Uso de funciones inseguras (MD5)  
+- Credenciales expuestas  
+- Debug activado  
+
+### 📦 SCA — pip-audit
+
+Analiza dependencias del proyecto:
+
+- Detección de librerías vulnerables  
+- Identificación de CVEs  
+
+### 🌐 DAST — OWASP ZAP
+
+Realiza análisis dinámico sobre la aplicación desplegada:
+
+- Escaneo automático de endpoints  
+- Generación de reporte HTML  
+- Uso de reglas personalizadas  
+
+---
+
+## Resultados de Seguridad
+
+### Antes de correcciones
+
+| Tipo | Resultado |
+|------|----------|
+| SAST (Semgrep) | 17 vulnerabilidades |
+| SCA (pip-audit) | 12 vulnerabilidades |
+| DAST (ZAP) | Alertas detectadas |
+
+
+
+
+## Conclusión
+
+La implementación de este pipeline DevSecOps permite:
+
+- Integrar seguridad en el ciclo de desarrollo  
+- Detectar vulnerabilidades de forma temprana  
+- Automatizar pruebas de seguridad  
+- Garantizar despliegues más seguros  
+
+---
+
+## Autor
+
+Richard Alfredo Chavez Lopez
