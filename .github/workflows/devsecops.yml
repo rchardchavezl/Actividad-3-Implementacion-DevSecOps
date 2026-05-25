@@ -45,21 +45,20 @@ jobs:
           echo "================================================"
           pip install semgrep -q
           semgrep --config=p/python --config=p/flask --config=p/owasp-top-ten \
-            --config=p/sql-injection --config=p/xss --text . || true
-        continue-on-error: true
+            --config=p/sql-injection --config=p/xss \
+            --text --error .
 
       - name: "SAST - Generar reporte JSON de hallazgos"
         run: |
-          pip install semgrep -q 2>/dev/null || true
+          pip install semgrep -q 2>/dev/null
           semgrep --config=p/python --config=p/flask --config=p/owasp-top-ten \
             --config=p/sql-injection --config=p/xss \
-            --json --output=semgrep_results.json --quiet . || true
+            --json --output=semgrep_results.json --quiet .
           echo ""
           echo "================================================"
           echo "  RESUMEN SAST - HALLAZGOS DETECTADOS"
           echo "================================================"
           python3 -c "import json; d=json.load(open('semgrep_results.json')); r=d.get('results',[]); print('Total hallazgos: '+str(len(r))); [print('  '+str(i+1)+'. ['+x.get('extra',{}).get('severity','?')+'] '+x.get('path','?')+':'+str(x.get('start',{}).get('line','?'))+' | '+x.get('check_id','?').split('.')[-1]) for i,x in enumerate(r)] or (print('Sin hallazgos SAST detectados') if not r else None)"
-        continue-on-error: true
 
       - name: "SCA - pip-audit (auditoria de dependencias)"
         run: |
@@ -69,13 +68,12 @@ jobs:
           echo "  Objetivo: detectar CVEs en requirements.txt"
           echo "================================================"
           pip install pip-audit -q
-          pip-audit --requirement requirements.txt --format json --output pip_audit_results.json || true
+          pip-audit --requirement requirements.txt --format json --output pip_audit_results.json
           echo ""
           echo "================================================"
           echo "  RESULTADOS SCA - DEPENDENCIAS AUDITADAS"
           echo "================================================"
           python3 -c "import json; d=json.load(open('pip_audit_results.json')); deps=d.get('dependencies',[]); total=sum(len(x.get('vulns',[]))for x in deps); print('Dependencias analizadas  : '+str(len(deps))); print('Vulnerabilidades halladas: '+str(total)); [print('  VULN: '+dep.get('name','?')+'=='+dep.get('version','?')+' -> '+v.get('id','?')) for dep in deps for v in dep.get('vulns',[])] or (print('Sin vulnerabilidades en dependencias') if total==0 else None)"
-        continue-on-error: true
 
       - name: "Subir reportes como artefactos"
         uses: actions/upload-artifact@v7
@@ -98,7 +96,6 @@ jobs:
           echo "  SCA  (pip-audit): $SCA vulnerabilidades detectadas"
           echo "  Reportes en     : Actions > Artifacts"
           echo "================================================"
-        continue-on-error: true
 
   dast-analysis:
     name: "DAST - OWASP ZAP (analisis dinamico)"
@@ -118,7 +115,7 @@ jobs:
           fail_action: false
           artifact_name: "zap-report-html"
         continue-on-error: true
-
+s
   deploy:
     name: "Deploy automatico a Render.com"
     runs-on: ubuntu-latest

@@ -1,5 +1,2 @@
-10016	IGNORE	Ignore missing security headers
-10017	IGNORE	Ignore cookie without secure flag
 10020	WARN	X-Frame-Options header not set
 10021	WARN	X-Content-Type-Options header missing
-10202	IGNORE	Ignore absence of anti-CSRF tokens
