@@ -115,7 +115,7 @@ jobs:
           fail_action: false
           artifact_name: "zap-report-html"
         continue-on-error: true
-s
+
   deploy:
     name: "Deploy automatico a Render.com"
     runs-on: ubuntu-latest
