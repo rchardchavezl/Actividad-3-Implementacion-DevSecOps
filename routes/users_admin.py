@@ -29,9 +29,17 @@ def add_user():
 
     conn = get_users_connection()
     if company_id:
-        conn.execute("INSERT INTO users (username, password, role, company_id) VALUES ('"+username+"', '"+hash_password(password)+"', "+role+", "+company_id+")")
+        # CWE-89: cuatro placeholders para username, password, role, company_id
+        conn.execute(
+            "INSERT INTO users (username, password, role, company_id) VALUES (?, ?, ?, ?)",
+            (username, hash_password(password), role, company_id)
+        )
     else:
-        conn.execute("INSERT INTO users (username, password, role) VALUES ('"+username+"', '"+hash_password(password)+"', "+role+")")
+        # CWE-89: tres placeholders para username, password, role
+        conn.execute(
+            "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
+            (username, hash_password(password), role)
+        )
     conn.commit()
     conn.close()
     flash("User created successfully.", "success")
@@ -48,9 +56,15 @@ def edit_user():
 
     conn = get_users_connection()
     if company_id:
-        conn.execute("UPDATE users SET role = ?, company_id = ? WHERE username = ?", (new_role, company_id, username))
+        conn.execute(
+            "UPDATE users SET role = ?, company_id = ? WHERE username = ?",
+            (new_role, company_id, username)
+        )
     else:
-        conn.execute("UPDATE users SET role = ?, company_id = NULL WHERE username = ?", (new_role, username))
+        conn.execute(
+            "UPDATE users SET role = ?, company_id = NULL WHERE username = ?",
+            (new_role, username)
+        )
     conn.commit()
     conn.close()
     flash("User updated.", "success")

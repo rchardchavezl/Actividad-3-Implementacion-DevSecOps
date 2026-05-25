@@ -20,7 +20,6 @@ def dashboard():
     ).fetchall()
     conn.close()
 
-    # Resolve user IDs for profile links
     user_ids = {}
     usernames = set(c['user'] for c in recent_comments)
     if usernames:
@@ -31,8 +30,8 @@ def dashboard():
                 user_ids[uname] = u['id']
         conn_u.close()
 
-    return render_template('dashboard.html', 
-                           total_companies=total_companies, 
+    return render_template('dashboard.html',
+                           total_companies=total_companies,
                            total_comments=total_comments,
                            recent_comments=recent_comments,
                            user_ids=user_ids)
@@ -42,22 +41,28 @@ def list_companies():
     if 'username' not in session:
         return redirect('/login')
     conn = get_data_connection()
-    
+
     search = request.args.get('q', '')
     if search:
-        companies = conn.execute("SELECT * FROM companies WHERE name LIKE '%" + search + "%'").fetchall()
+        # CWE-89: consulta parametrizada con placeholder — nunca concatenar entrada de usuario
+        companies = conn.execute(
+            "SELECT * FROM companies WHERE name LIKE ?",
+            ('%' + search + '%',)
+        ).fetchall()
     else:
         companies = conn.execute("SELECT * FROM companies").fetchall()
 
     companies_list = []
     for company in companies:
         company_dict = dict(company)
-        company_dict['comment_count'] = conn.execute("SELECT COUNT(*) FROM comments WHERE company_id = ?", (company_dict['id'],)).fetchone()[0]
+        company_dict['comment_count'] = conn.execute(
+            "SELECT COUNT(*) FROM comments WHERE company_id = ?",
+            (company_dict['id'],)
+        ).fetchone()[0]
         companies_list.append(company_dict)
-    
+
     conn.close()
     return render_template('companies/home.html', companies=companies_list, search=search)
-
 
 
 @app.route('/companies/<int:company_id>', methods=['GET', 'POST'])
@@ -65,21 +70,32 @@ def company_detail(company_id):
     if 'username' not in session:
         return redirect('/login')
     conn = get_data_connection()
-    company = conn.execute("SELECT * FROM companies WHERE id = " + str(company_id)).fetchone()
-    comments = conn.execute("SELECT * FROM comments WHERE company_id = " + str(company_id)).fetchall()
+
+    # CWE-89: placeholders en lugar de concatenacion de strings
+    company = conn.execute(
+        "SELECT * FROM companies WHERE id = ?", (company_id,)
+    ).fetchone()
+    comments = conn.execute(
+        "SELECT * FROM comments WHERE company_id = ?", (company_id,)
+    ).fetchall()
+
     if request.method == 'POST':
         comment = request.form['comment']
         user = session.get('username')
-        conn.execute("INSERT INTO comments (company_id, user, comment) VALUES ("+str(company_id)+", '"+user+"', '"+comment+"')")
+        # CWE-89: tres placeholders para los tres valores de usuario
+        conn.execute(
+            "INSERT INTO comments (company_id, user, comment) VALUES (?, ?, ?)",
+            (company_id, user, comment)
+        )
         conn.commit()
         conn.close()
         flash("Comment added successfully.", "success")
-        return redirect('/companies/'+str(company_id))
+        return redirect('/companies/' + str(company_id))
+
     conn.close()
     if not company:
         return render_template('errors/404.html'), 404
 
-    # Resolve user IDs for profile links
     user_ids = {}
     usernames = set(c['user'] for c in comments)
     if usernames:
@@ -92,6 +108,7 @@ def company_detail(company_id):
 
     return render_template('companies/company.html', company=company, comments=comments, user_ids=user_ids)
 
+
 @app.route('/companies/register', methods=['GET', 'POST'])
 def register_company():
     if session.get('role') != 'admin':
@@ -101,7 +118,11 @@ def register_company():
         description = request.form['description']
         owner = request.form.get('owner', session.get('username'))
         conn = get_data_connection()
-        conn.execute("INSERT INTO companies (name, description, owner) VALUES ("+company_name+", '"+description+"', '"+owner+"')")
+        # CWE-89: tres placeholders para name, description, owner
+        conn.execute(
+            "INSERT INTO companies (name, description, owner) VALUES (?, ?, ?)",
+            (company_name, description, owner)
+        )
         conn.commit()
         conn.close()
         flash("Company registered successfully.", "success")
@@ -114,20 +135,31 @@ def edit_company(company_id):
     if 'username' not in session:
         return redirect('/')
     conn = get_data_connection()
-    company = conn.execute("SELECT * FROM companies WHERE id = "+ str(company_id)).fetchone()
+
+    # CWE-89: placeholder para company_id
+    company = conn.execute(
+        "SELECT * FROM companies WHERE id = ?", (company_id,)
+    ).fetchone()
+
     if not company:
         conn.close()
         return render_template('errors/404.html'), 404
     if session.get('role') != 'admin' and session.get('username') != company['owner']:
         conn.close()
         return render_template('errors/403.html'), 403
+
     if request.method == 'POST':
         new_name = request.form['company_name']
         new_description = request.form['description']
-        conn.execute("UPDATE companies SET name = '"+new_name+"', description = '"+new_description+"' WHERE id = "+str(company_id))
+        # CWE-89: placeholders para name, description e id
+        conn.execute(
+            "UPDATE companies SET name = ?, description = ? WHERE id = ?",
+            (new_name, new_description, company_id)
+        )
         conn.commit()
         conn.close()
         flash("Company updated successfully.", "success")
         return redirect('/companies')
+
     conn.close()
     return render_template('companies/edit_company.html', company=company)
