@@ -1,3 +1,9 @@
+# DevSecOps Implementation
+
+## Descripción
+
+Proyecto académico enfocado en la implementación de un flujo DevSecOps para una aplicación web.
+
 # NovaCorp — Company Management Platform + DevSecOps
 
 NovaCorp es una aplicación web desarrollada en Flask para la gestión de empresas y comentarios asociados.  
@@ -46,6 +52,14 @@ La aplicación se encuentra desplegada y accesible públicamente en:
 ```
 
 ---
+## Características
+
+- Desarrollo Web
+- Git
+- GitHub
+- CI/CD
+- DevSecOps
+- Deploy en Render
 
 ## Tecnologías utilizadas
 
